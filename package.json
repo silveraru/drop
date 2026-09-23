@@ -1,0 +1,21 @@
+{
+  "name": "drop",
+  "version": "0.1.0",
+  "description": "Leave a note, photo or voice clip pinned to an exact spot. It can only be opened by standing there.",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "leaflet": "1.9",
+    "multer": "^2.4.0"
+  }
+}

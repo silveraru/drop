@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Drop</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="map"></div>
+
+  <header id="status" class="pill">Finding you…</header>
+
+  <button id="drop-btn" class="fab" disabled>＋ Drop here</button>
+
+  <!-- Compose a new drop -->
+  <section id="compose" class="sheet" hidden>
+    <div class="sheet-head">
+      <h2>Leave a drop</h2>
+      <button class="close" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-kind="note" aria-selected="true">📝 Note</button>
+      <button role="tab" data-kind="photo">📷 Photo</button>
+      <button role="tab" data-kind="voice">🎙️ Voice</button>
+    </div>
+
+    <div data-panel="photo" hidden>
+      <label class="file">
+        <input id="photo-input" type="file" accept="image/*" capture="environment">
+        <span>Take or choose a photo</span>
+      </label>
+      <img id="photo-preview" alt="" hidden>
+    </div>
+
+    <div data-panel="voice" hidden>
+      <button id="record-btn" class="record">● Record</button>
+      <span id="record-time">0:00 / 1:00</span>
+      <audio id="voice-preview" controls hidden></audio>
+    </div>
+
+    <textarea id="body-input" maxlength="2000" rows="4" placeholder="Write a message only someone standing here can read…"></textarea>
+    <input id="hint-input" maxlength="140" placeholder="Public hint (optional), e.g. “under the oak by the gate”">
+    <p class="fine">Your drop is pinned to where you're standing right now. Anyone can see the pin and hint; only people within <b class="radius"></b> m can open it.</p>
+    <button id="submit-btn" class="primary">Drop it</button>
+    <p id="compose-error" class="error" role="alert"></p>
+  </section>
+
+  <!-- View / open a drop -->
+  <section id="viewer" class="sheet" hidden>
+    <div class="sheet-head">
+      <h2 id="viewer-title"></h2>
+      <button class="close" data-close aria-label="Close">✕</button>
+    </div>
+    <p id="viewer-hint" class="hint"></p>
+    <p id="viewer-meta" class="fine"></p>
+    <div id="viewer-locked">
+      <p id="viewer-distance" class="distance"></p>
+      <button id="open-btn" class="primary">🔓 Open</button>
+    </div>
+    <div id="viewer-content" hidden></div>
+    <p id="viewer-error" class="error" role="alert"></p>
+  </section>
+
+  <div id="toast" class="pill" hidden></div>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
