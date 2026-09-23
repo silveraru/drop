@@ -13,14 +13,27 @@
 <body>
   <div id="map"></div>
 
-  <header id="status" class="pill">Finding you…</header>
+  <header class="top">
+    <div id="status" class="pill">Finding you…</div>
+    <div id="build-banner" class="banner" hidden>
+      <span>🧭 <b id="build-title"></b> · <span id="build-steps"></span></span>
+      <span class="banner-actions">
+        <button id="build-publish" class="small primary">Publish</button>
+        <button id="build-pause" class="small" aria-label="Stop building">Pause</button>
+      </span>
+    </div>
+  </header>
 
-  <button id="drop-btn" class="fab" disabled>＋ Drop here</button>
+  <nav class="bottom">
+    <button id="mine-btn" class="round" aria-label="My drops and hunts">☰</button>
+    <button id="drop-btn" class="fab" disabled>＋ Drop here</button>
+    <button id="locate-btn" class="round" aria-label="Center on me">◎</button>
+  </nav>
 
   <!-- Compose a new drop -->
   <section id="compose" class="sheet" hidden>
     <div class="sheet-head">
-      <h2>Leave a drop</h2>
+      <h2 id="compose-title">Leave a drop</h2>
       <button class="close" data-close aria-label="Close">✕</button>
     </div>
     <div class="tabs" role="tablist">
@@ -39,13 +52,40 @@
 
     <div data-panel="voice" hidden>
       <button id="record-btn" class="record">● Record</button>
-      <span id="record-time">0:00 / 1:00</span>
+      <span id="record-time"></span>
       <audio id="voice-preview" controls hidden></audio>
     </div>
 
-    <textarea id="body-input" maxlength="2000" rows="4" placeholder="Write a message only someone standing here can read…"></textarea>
-    <input id="hint-input" maxlength="140" placeholder="Public hint (optional), e.g. “under the oak by the gate”">
-    <p class="fine">Your drop is pinned to where you're standing right now. Anyone can see the pin and hint; only people within <b class="radius"></b> m can open it.</p>
+    <textarea id="body-input" maxlength="2000" rows="4"></textarea>
+    <input id="hint-input" maxlength="140" placeholder="Hint (optional), e.g. “under the oak by the gate”">
+
+    <div id="drop-options">
+      <div class="segmented" role="radiogroup" aria-label="Who can find it">
+        <label><input type="radio" name="visibility" value="public" checked><span>🌍 On the map</span></label>
+        <label><input type="radio" name="visibility" value="private"><span>🔑 Link only</span></label>
+      </div>
+      <div class="row">
+        <label class="field">Disappears after
+          <select id="max-opens">
+            <option value="">never</option>
+            <option value="1">1 finder</option>
+            <option value="3">3 finders</option>
+            <option value="10">10 finders</option>
+          </select>
+        </label>
+        <label class="field">Expires
+          <select id="expires">
+            <option value="">never</option>
+            <option value="1">in 1 hour</option>
+            <option value="24">in 1 day</option>
+            <option value="168">in 1 week</option>
+            <option value="720">in 30 days</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <p id="compose-fine" class="fine"></p>
     <button id="submit-btn" class="primary">Drop it</button>
     <p id="compose-error" class="error" role="alert"></p>
   </section>
@@ -56,14 +96,68 @@
       <h2 id="viewer-title"></h2>
       <button class="close" data-close aria-label="Close">✕</button>
     </div>
+    <p id="viewer-hunt" class="badge" hidden></p>
     <p id="viewer-hint" class="hint"></p>
     <p id="viewer-meta" class="fine"></p>
     <div id="viewer-locked">
       <p id="viewer-distance" class="distance"></p>
       <button id="open-btn" class="primary">🔓 Open</button>
     </div>
-    <div id="viewer-content" hidden></div>
+    <div id="viewer-content" hidden>
+      <div id="viewer-body"></div>
+      <p id="viewer-destructed" class="notice" hidden>💥 That was the last open. This drop just self-destructed.</p>
+      <div id="viewer-next" hidden></div>
+      <div id="replies" hidden>
+        <h3>Replies</h3>
+        <ul id="reply-list"></ul>
+        <form id="reply-form">
+          <textarea id="reply-input" maxlength="500" rows="2" placeholder="Leave a reply for the next finder…" required></textarea>
+          <button class="primary small">Reply</button>
+        </form>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="share-btn" class="link">Share link</button>
+      <button id="delete-btn" class="link danger">Delete</button>
+      <button id="report-btn" class="link">Report</button>
+    </div>
     <p id="viewer-error" class="error" role="alert"></p>
+  </section>
+
+  <!-- My stuff -->
+  <section id="mine" class="sheet" hidden>
+    <div class="sheet-head">
+      <h2>Yours</h2>
+      <button class="close" data-close aria-label="Close">✕</button>
+    </div>
+    <button id="new-hunt-btn" class="primary">🧭 Build a treasure hunt</button>
+    <form id="hunt-form" hidden>
+      <input id="hunt-title" maxlength="80" placeholder="Hunt name" required>
+      <textarea id="hunt-desc" maxlength="500" rows="2" placeholder="What's it about? (optional)"></textarea>
+      <div class="segmented" role="radiogroup" aria-label="Who can play">
+        <label><input type="radio" name="hunt-visibility" value="public" checked><span>🌍 Anyone nearby</span></label>
+        <label><input type="radio" name="hunt-visibility" value="private"><span>🔑 Link only</span></label>
+      </div>
+      <p class="fine">Walk the route and add each step where you stand. Players only see step 1; opening a step reveals where the next one is.</p>
+      <button class="primary">Start building</button>
+    </form>
+    <h3>Hunts</h3>
+    <ul id="mine-hunts" class="list"></ul>
+    <h3>Drops</h3>
+    <ul id="mine-drops" class="list"></ul>
+  </section>
+
+  <!-- Report -->
+  <section id="report" class="sheet" hidden>
+    <div class="sheet-head">
+      <h2>Report</h2>
+      <button class="close" data-close aria-label="Close">✕</button>
+    </div>
+    <form id="report-form">
+      <div id="report-reasons" class="reasons"></div>
+      <input id="report-note" maxlength="280" placeholder="Anything else? (optional)">
+      <button class="primary">Send report</button>
+    </form>
   </section>
 
   <div id="toast" class="pill" hidden></div>

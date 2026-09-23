@@ -15,6 +15,8 @@ const app = createApp({
   trustProxy: process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) : undefined,
   unlockRadiusM: Number(process.env.UNLOCK_RADIUS_M) || undefined,
   maxAccuracyM: Number(process.env.MAX_ACCURACY_M) || undefined,
+  reportHideThreshold: Number(process.env.REPORT_HIDE_THRESHOLD) || undefined,
+  adminToken: process.env.ADMIN_TOKEN || undefined,
 });
 
 app.listen(port, () => {

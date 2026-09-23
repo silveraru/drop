@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Drop Admin</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <style>
+    :root { --bg: #f9fafb; --panel: #fff; --text: #111827; --muted: #6b7280; --border: #e5e7eb; --accent: #f59e0b; --error: #b91c1c; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #111827; --panel: #1f2937; --text: #f9fafb; --muted: #9ca3af; --border: #374151; --error: #f87171; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
+    h1 { margin: 0; font-size: 22px; }
+    form { display: flex; gap: 8px; }
+    input { flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; }
+    button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #111827; font-weight: 600; }
+    button.danger { color: var(--error); }
+    .item { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .meta { color: var(--muted); font-size: 13px; }
+    .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--border); margin-right: 6px; }
+    .tag.hidden { background: var(--error); color: #fff; }
+    .content { white-space: pre-wrap; margin: 0; }
+    img, audio { max-width: 100%; max-height: 300px; border-radius: 8px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .empty, .error { color: var(--muted); }
+    .error { color: var(--error); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Reports</h1>
+    <form id="auth">
+      <input id="token" type="password" placeholder="Admin token" autocomplete="current-password" required>
+      <button class="primary">Load</button>
+    </form>
+    <p id="msg" class="empty"></p>
+    <div id="items"></div>
+  </main>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    let token = '';
+    try { token = sessionStorage.getItem('drop.admin') || ''; } catch {}
+    $('#token').value = token;
+
+    async function call(method, url) {
+      const res = await fetch(url, { method, headers: { authorization: `Bearer ${token}` } });
+      const data = res.status === 204 ? {} : await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function el(tag, props = {}, ...kids) {
+      const n = Object.assign(document.createElement(tag), props);
+      n.append(...kids.filter(Boolean));
+      return n;
+    }
+
+    function render(items) {
+      const box = $('#items');
+      box.replaceChildren();
+      $('#msg').className = 'empty';
+      $('#msg').textContent = items.length ? `${items.length} reported item${items.length === 1 ? '' : 's'}` : 'Nothing reported. 🎉';
+      for (const it of items) {
+        const reasons = Object.entries(it.reasons.reduce((a, r) => ((a[r] = (a[r] || 0) + 1), a), {}))
+          .map(([r, n]) => `${r} ×${n}`).join(', ');
+        const node = el('div', { className: 'item' },
+          el('div', {},
+            el('span', { className: 'tag' }, it.targetType === 'drop' ? `${it.kind} drop` : 'reply'),
+            it.hidden && el('span', { className: 'tag hidden' }, 'hidden'),
+            it.huntId && el('span', { className: 'tag' }, 'hunt step'),
+            it.destroyed && el('span', { className: 'tag' }, 'self-destructed'),
+          ),
+          it.missing && el('p', { className: 'meta' }, 'Already deleted.'),
+          it.hint && el('p', { className: 'content' }, `Hint: ${it.hint}`),
+          it.mediaUrl && it.kind === 'photo' && el('img', { src: it.mediaUrl, alt: 'Reported photo' }),
+          it.mediaUrl && it.kind === 'voice' && el('audio', { src: it.mediaUrl, controls: true }),
+          it.body && el('p', { className: 'content' }, it.body),
+          el('p', { className: 'meta' }, `${it.count} report${it.count === 1 ? '' : 's'}: ${reasons}`),
+          ...it.notes.map((n) => el('p', { className: 'meta' }, `“${n.note}”`)),
+          it.lat !== undefined && el('p', { className: 'meta' },
+            el('a', { href: `https://www.openstreetmap.org/?mlat=${it.lat}&mlon=${it.lng}#map=18/${it.lat}/${it.lng}`, target: '_blank', rel: 'noopener' }, 'Where is it?')),
+        );
+        if (!it.missing) {
+          node.append(el('div', { className: 'row' },
+            el('button', { textContent: 'Keep (restore)', onclick: () => act('POST', `/api/admin/${it.targetType}/${it.targetId}/restore`) }),
+            el('button', {
+              className: 'danger',
+              textContent: it.huntId ? 'Delete whole hunt' : 'Delete',
+              onclick: () => confirm('Delete permanently?') && act('DELETE', `/api/admin/${it.targetType}/${it.targetId}`),
+            }),
+          ));
+        }
+        box.append(node);
+      }
+    }
+
+    async function act(method, url) {
+      try { await call(method, url); await load(); } catch (e) { fail(e); }
+    }
+    function fail(e) { $('#msg').className = 'error'; $('#msg').textContent = e.message; }
+    async function load() {
+      try { render((await call('GET', '/api/admin/reports')).items); } catch (e) { fail(e); }
+    }
+
+    $('#auth').addEventListener('submit', (e) => {
+      e.preventDefault();
+      token = $('#token').value;
+      try { sessionStorage.setItem('drop.admin', token); } catch {}
+      load();
+    });
+    if (token) load();
+  </script>
+</body>
+</html>
